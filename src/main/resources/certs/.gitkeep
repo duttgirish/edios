@@ -1,0 +1,2 @@
+# Placeholder for TLS certificates
+# Run ./scripts/generate-certs.sh to generate development certificates
