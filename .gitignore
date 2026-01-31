@@ -51,6 +51,9 @@ src/main/resources/certs/*.pem
 logs/
 *.log
 
+### Claude Code ###
+CLAUDE.md
+
 ### Environment ###
 .env
 .env.local
