@@ -1,0 +1,726 @@
+<!--
+  EDIOS - Event-Driven Ingestion & Observability System
+  Architecture & Design Diagrams
+  Author: Girish Dutt
+  Repository: https://github.com/duttgirish/edios
+-->
+<mxfile host="app.diagrams.net" agent="draw.io" version="24.0.0" pages="6">
+  <!-- Page 1: System Architecture Overview -->
+  <diagram id="architecture-overview" name="1. System Architecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title1" value="EDIOS - System Architecture Overview" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle1" value="Author: Girish Dutt | Quarkus 3.x + Google CEL + Vert.x Event Bus" style="text;html=1;fontSize=12;fontStyle=2;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="400" y="55" width="800" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Client Layer -->
+        <mxCell id="client-group" value="Client Layer" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="client" value="HTTP Client&#xa;(REST Consumer)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="client-group">
+          <mxGeometry x="50" y="50" width="100" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- REST Layer -->
+        <mxCell id="rest-group" value="REST Layer (JAX-RS Reactive)" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="320" y="100" width="360" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ter" value="TransactionEventResource&#xa;POST /events&#xa;&#xa;- Validates batch size (max 1000)&#xa;- Returns 202 Accepted&#xa;- Dispatches to Event Bus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="rest-group">
+          <mxGeometry x="10" y="40" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rmr" value="RuleManagement&#xa;Resource&#xa;&#xa;GET /rules&#xa;GET /rules/stats&#xa;POST /rules/refresh" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="rest-group">
+          <mxGeometry x="240" y="40" width="110" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Event Bus Layer -->
+        <mxCell id="eventbus-group" value="Vert.x Event Bus" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="760" y="100" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="eb" value="Event Bus&#xa;Address: 'transaction.process'&#xa;&#xa;- Local-only delivery&#xa;- TransactionEventCodec&#xa;- 5s send timeout" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="eventbus-group">
+          <mxGeometry x="20" y="40" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Worker Layer -->
+        <mxCell id="worker-group" value="Worker Layer (Virtual Threads)" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="100" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="rev1" value="RuleEvaluatorVerticle&#xa;&#xa;@ConsumeEvent&#xa;@RunOnVirtualThread&#xa;&#xa;- Evaluates all rules&#xa;- Logs ALERTS for matches&#xa;- Tracks processing time" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="worker-group">
+          <mxGeometry x="20" y="35" width="240" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Service Layer -->
+        <mxCell id="service-group" value="Service Layer" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="320" y="360" width="360" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="rcs" value="RuleCacheService&#xa;&#xa;- AtomicReference&lt;List&lt;Rule&gt;&gt;&#xa;- Periodic refresh (60s, SKIP)&#xa;- Startup initialization&#xa;- Last refresh time tracking&#xa;- Immutable cached rule list" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="service-group">
+          <mxGeometry x="10" y="40" width="200" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="scheduler" value="@Scheduled&#xa;every=60s&#xa;SKIP concurrent" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="service-group">
+          <mxGeometry x="225" y="60" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Engine Layer -->
+        <mxCell id="engine-group" value="CEL Engine Layer" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="760" y="360" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="cre" value="CelRuleEngine&#xa;&#xa;- CEL Compiler + Runtime&#xa;- volatile Map&lt;Long, Program&gt;&#xa;- Atomic swap on recompile&#xa;- Variables: debitAccount, creditAccount,&#xa;  cin, amount, transactedTimeEpochSeconds&#xa;- Returns unmodifiable results" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="engine-group">
+          <mxGeometry x="15" y="40" width="270" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- Repository Layer -->
+        <mxCell id="repo-group" value="Repository Layer" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="320" y="630" width="360" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="rr" value="RuleRepository&#xa;&#xa;- In-memory sample rules (8 active)&#xa;- Filters by active status&#xa;- Returns Uni&lt;List&lt;Rule&gt;&gt;&#xa;- Matches init.sql schema" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="repo-group">
+          <mxGeometry x="10" y="40" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="MariaDB&#xa;rules table&#xa;(future)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;size=10;" vertex="1" parent="repo-group">
+          <mxGeometry x="250" y="40" width="90" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Health & Config -->
+        <mxCell id="health-group" value="Cross-Cutting Concerns" style="swimlane;startSize=30;fillColor=#e6d0de;strokeColor=#996185;fontStyle=1;fontSize=13;rounded=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="360" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="health" value="RuleCacheHealthCheck&#xa;(@Readiness)&#xa;&#xa;- Checks cached + compiled count&#xa;- Reports last refresh time&#xa;- Differentiates failure reasons" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996185;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="health-group">
+          <mxGeometry x="10" y="35" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="exception" value="ExceptionMappers&#xa;&#xa;- IllegalArgument → 400&#xa;- JsonProcessing → 400&#xa;- NullPointer → 400&#xa;- Generic → 500" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996185;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="health-group">
+          <mxGeometry x="10" y="115" width="250" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#333333;fontSize=10;" edge="1" source="client" target="ter" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a1-label" value="POST /events&#xa;JSON Array" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#333333;" vertex="1" connectable="0" parent="a1">
+          <mxGeometry x="-0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#b85450;fontSize=10;" edge="1" source="ter" target="eb" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a2-label" value="eventBus.send()" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#b85450;" vertex="1" connectable="0" parent="a2">
+          <mxGeometry x="-0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;fontSize=10;" edge="1" source="eb" target="rev1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a3-label" value="@ConsumeEvent" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#9673a6;" vertex="1" connectable="0" parent="a3">
+          <mxGeometry x="-0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#82b366;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" source="rev1" target="rcs" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1240" y="320" />
+              <mxPoint x="430" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a4-label" value="getCachedRules()" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#82b366;" vertex="1" connectable="0" parent="a4">
+          <mxGeometry x="-0.3" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" source="rev1" target="cre" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="320" />
+              <mxPoint x="1350" y="340" />
+              <mxPoint x="910" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a5-label" value="evaluateEvent()" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#d6b656;" vertex="1" connectable="0" parent="a5">
+          <mxGeometry x="-0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="rcs" target="rr" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a6-label" value="findAllActiveRules()" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#82b366;" vertex="1" connectable="0" parent="a6">
+          <mxGeometry x="-0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" source="rcs" target="cre" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a7-label" value="compileAndCacheRules()" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#d6b656;" vertex="1" connectable="0" parent="a7">
+          <mxGeometry x="-0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#666666;dashed=1;" edge="1" source="rr" target="db" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a8-label" value="(future)" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#999999;fontStyle=2;" vertex="1" connectable="0" parent="a8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#82b366;dashed=1;" edge="1" source="scheduler" target="rcs" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#6c8ebf;dashed=1;" edge="1" source="rmr" target="rcs" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="695" y="300" />
+              <mxPoint x="430" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- Page 2: Component Design -->
+  <diagram id="component-design" name="2. Component Design">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title2" value="EDIOS - Component Design (org.iki.*)" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle2" value="Author: Girish Dutt | Package: org.iki" style="text;html=1;fontSize=12;fontStyle=2;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="300" y="55" width="800" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Model Package -->
+        <mxCell id="model-pkg" value="org.iki.model" style="swimlane;startSize=25;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="400" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="te-class" value="&lt;&lt;record&gt;&gt;&#xa;TransactionEvent&#xa;─────────────────&#xa;+ debitAccount: String&#xa;+ creditAccount: String&#xa;+ cin: String&#xa;+ amount: BigDecimal&#xa;+ transactedTime: Instant&#xa;─────────────────&#xa;Validates: non-null, non-blank" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=8;spacingTop=4;size=14;" vertex="1" parent="model-pkg">
+          <mxGeometry x="10" y="35" width="185" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="rule-class" value="&lt;&lt;record&gt;&gt;&#xa;Rule&#xa;─────────────────&#xa;+ id: Long&#xa;+ expression: String&#xa;+ description: String&#xa;+ active: boolean&#xa;─────────────────&#xa;Rule(id, expression) shortcut" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=8;spacingTop=4;size=14;" vertex="1" parent="model-pkg">
+          <mxGeometry x="205" y="35" width="185" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="rer-class" value="&lt;&lt;record&gt;&gt;&#xa;RuleEvaluationResult&#xa;──────────────────────&#xa;+ ruleId: Long&#xa;+ expression: String&#xa;+ matched: boolean&#xa;+ error: String&#xa;──────────────────────&#xa;+ success(id, expr, matched)&#xa;+ failure(id, expr, error)&#xa;+ hasError(): boolean" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=8;spacingTop=4;size=14;" vertex="1" parent="model-pkg">
+          <mxGeometry x="100" y="195" width="200" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- REST Package -->
+        <mxCell id="rest-pkg" value="org.iki.rest" style="swimlane;startSize=25;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="100" width="440" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="ter-comp" value="TransactionEventResource&#xa;@Path(&quot;/events&quot;)&#xa;─────────────────&#xa;POST / → 202 Accepted&#xa;maxBatchSize = 1000" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="rest-pkg">
+          <mxGeometry x="10" y="35" width="195" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rmr-comp" value="RuleManagementResource&#xa;@Path(&quot;/rules&quot;)&#xa;─────────────────&#xa;GET / → List&lt;Rule&gt;&#xa;GET /stats → RuleStats&#xa;POST /refresh → 202" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="rest-pkg">
+          <mxGeometry x="225" y="35" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Engine Package -->
+        <mxCell id="engine-pkg" value="org.iki.engine" style="swimlane;startSize=25;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="300" width="440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cre-comp" value="CelRuleEngine (@ApplicationScoped)&#xa;──────────────────────────────────&#xa;- compiler: CelCompiler&#xa;- runtime: CelRuntime&#xa;- compiledPrograms: volatile Map&lt;Long, Program&gt;&#xa;──────────────────────────────────&#xa;+ compileAndCacheRules(rules): int&#xa;+ evaluateEvent(event, rules): List&lt;Result&gt;&#xa;+ getCachedRuleCount(): int" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="engine-pkg">
+          <mxGeometry x="10" y="30" width="420" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Service Package -->
+        <mxCell id="service-pkg" value="org.iki.service" style="swimlane;startSize=25;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="960" y="100" width="400" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="rcs-comp" value="RuleCacheService (@ApplicationScoped)&#xa;─────────────────────────────────────&#xa;- cachedRules: AtomicReference&lt;List&lt;Rule&gt;&gt;&#xa;- lastRefreshTime: volatile Instant&#xa;- lastRefreshSucceeded: volatile boolean&#xa;─────────────────────────────────────&#xa;+ refreshRules() | forceRefresh()&#xa;+ getCachedRules(): List&lt;Rule&gt;&#xa;+ getLastRefreshTime() | isLastRefreshSucceeded()" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="service-pkg">
+          <mxGeometry x="10" y="30" width="380" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Verticle Package -->
+        <mxCell id="verticle-pkg" value="org.iki.verticle" style="swimlane;startSize=25;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="960" y="300" width="400" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="rev-comp" value="RuleEvaluatorVerticle (@ApplicationScoped)&#xa;──────────────────────────────────────────&#xa;@ConsumeEvent(&quot;transaction.process&quot;, blocking=true)&#xa;@RunOnVirtualThread&#xa;──────────────────────────────────────────&#xa;+ processTransaction(event): void&#xa;- handleMatchedRules(event, results): void" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="verticle-pkg">
+          <mxGeometry x="10" y="30" width="380" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Repository & Config -->
+        <mxCell id="repo-pkg" value="org.iki.repository" style="swimlane;startSize=25;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="480" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rr-comp" value="RuleRepository (@ApplicationScoped)&#xa;────────────────────────────────&#xa;- SAMPLE_RULES: List&lt;Rule&gt; (8 rules)&#xa;+ findAllActiveRules(): Uni&lt;List&lt;Rule&gt;&gt;&#xa;+ getTotalRuleCount(): int" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666666;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="repo-pkg">
+          <mxGeometry x="10" y="30" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="config-pkg" value="org.iki.config" style="swimlane;startSize=25;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="480" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ebc-comp" value="EventBusConfiguration&#xa;  Registers TransactionEventCodec&#xa;JacksonConfiguration&#xa;  JavaTimeModule + ISO dates" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666666;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="config-pkg">
+          <mxGeometry x="10" y="30" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="health-pkg" value="org.iki.health" style="swimlane;startSize=25;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="720" y="480" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="hc-comp" value="RuleCacheHealthCheck (@Readiness)&#xa;───────────────────────────────&#xa;Reports: cachedRules, compiledRules,&#xa;lastRefreshTime, lastRefreshSucceeded" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#666666;fontSize=10;align=left;spacingLeft=20;spacingTop=4;" vertex="1" parent="health-pkg">
+          <mxGeometry x="10" y="30" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Dependency arrows -->
+        <mxCell id="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#333;dashed=1;endArrow=open;endFill=0;" edge="1" source="ter-comp" target="te-class" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#333;dashed=1;endArrow=open;endFill=0;" edge="1" source="cre-comp" target="rer-class" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#333;dashed=1;endArrow=open;endFill=0;" edge="1" source="rcs-comp" target="rr-comp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#333;dashed=1;endArrow=open;endFill=0;" edge="1" source="rev-comp" target="cre-comp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=1;strokeColor=#333;dashed=1;endArrow=open;endFill=0;" edge="1" source="rev-comp" target="rcs-comp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- Page 3: Event Ingestion Flow -->
+  <diagram id="ingestion-flow" name="3. Event Ingestion Flow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title3" value="EDIOS - Event Ingestion Flow" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle3" value="Author: Girish Dutt | POST /events → Event Bus → Rule Evaluation → ALERT" style="text;html=1;fontSize=12;fontStyle=2;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="300" y="55" width="800" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Flow steps -->
+        <mxCell id="f1" value="1. Client sends&#xa;POST /events&#xa;JSON Array of&#xa;TransactionEvent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="160" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="f2" value="2. Validate&#xa;- events != null&#xa;- events not empty&#xa;- size ≤ maxBatchSize (1000)" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="260" y="100" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="f2-fail" value="400 Bad Request&#xa;ErrorResponse" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="310" y="270" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="f3" value="3. For each event:&#xa;eventBus.send(&#xa;  &quot;transaction.process&quot;,&#xa;  event,&#xa;  localOnly + 5s timeout&#xa;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="520" y="110" width="180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="f4" value="4. Return 202 Accepted&#xa;{ dispatched: N, total: M }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="270" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="f5" value="5. RuleEvaluatorVerticle&#xa;@ConsumeEvent&#xa;receives TransactionEvent&#xa;on virtual thread" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="110" width="180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="f6" value="6. Get cached rules&#xa;from RuleCacheService&#xa;(AtomicReference read)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="110" width="170" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="f7" value="7. CelRuleEngine&#xa;.evaluateEvent()&#xa;&#xa;- Snapshot compiled programs&#xa;- Build CEL variables map&#xa;- Evaluate each rule&#xa;- Return unmodifiable results" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="260" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="f8" value="8. Count results&#xa;(single pass)&#xa;&#xa;matchedCount&#xa;errorCount&#xa;durationMs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="260" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="f9" value="9. handleMatchedRules()&#xa;&#xa;For each matched result:&#xa;LOG ALERT with&#xa;ruleId, CIN, debit,&#xa;credit, amount" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="420" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- CEL Variables Box -->
+        <mxCell id="cel-vars" value="CEL Variable Mapping&#xa;────────────────────────&#xa;debitAccount → event.debitAccount()&#xa;creditAccount → event.creditAccount()&#xa;cin → event.cin()&#xa;amount → event.amount().doubleValue()&#xa;transactedTimeEpochSeconds&#xa;  → event.transactedTime().getEpochSecond()" style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffcc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;spacingTop=4;size=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="380" width="280" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="fa1" style="rounded=1;strokeWidth=2;strokeColor=#333;" edge="1" source="f1" target="f2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa2" style="rounded=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="f2" target="f2-fail" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa2-label" value="FAIL" style="edgeLabel;html=1;fontSize=9;fontColor=#b85450;fontStyle=1;" vertex="1" connectable="0" parent="fa2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa3" style="rounded=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="f2" target="f3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa3-label" value="PASS" style="edgeLabel;html=1;fontSize=9;fontColor=#82b366;fontStyle=1;" vertex="1" connectable="0" parent="fa3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa4" style="rounded=1;strokeWidth=2;strokeColor=#333;" edge="1" source="f3" target="f4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa4-label" value="immediate" style="edgeLabel;html=1;fontSize=9;fontColor=#666;" vertex="1" connectable="0" parent="fa4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa5" style="rounded=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" source="f3" target="f5" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa5-label" value="async" style="edgeLabel;html=1;fontSize=9;fontColor=#9673a6;fontStyle=2;" vertex="1" connectable="0" parent="fa5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa6" style="rounded=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" source="f5" target="f6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa7" style="rounded=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" source="f6" target="f7" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa8" style="rounded=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" source="f7" target="f8" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fa9" style="rounded=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="f8" target="f9" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- Page 4: Rule Cache Refresh Flow -->
+  <diagram id="refresh-flow" name="4. Rule Cache Refresh">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title4" value="EDIOS - Rule Cache Refresh Flow" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle4" value="Author: Girish Dutt | Periodic (60s) + Startup + Manual Trigger" style="text;html=1;fontSize=12;fontStyle=2;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="200" y="55" width="800" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Triggers -->
+        <mxCell id="t1" value="App Startup&#xa;@Observes StartupEvent" style="shape=doubleArrow;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;direction=south;" vertex="1" parent="1">
+          <mxGeometry x="60" y="100" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="@Scheduled(every=60s)&#xa;SKIP concurrent" style="shape=doubleArrow;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;direction=south;" vertex="1" parent="1">
+          <mxGeometry x="230" y="100" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" value="POST /rules/refresh&#xa;forceRefresh()" style="shape=doubleArrow;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;direction=south;" vertex="1" parent="1">
+          <mxGeometry x="400" y="100" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Steps -->
+        <mxCell id="r1" value="RuleCacheService&#xa;.refreshRules()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="200" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" value="RuleRepository&#xa;.findAllActiveRules()&#xa;&#xa;Filter: rule.active == true&#xa;Returns: Uni&lt;List&lt;Rule&gt;&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="200" y="290" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" value="List.copyOf(rules)&#xa;Make immutable" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="200" y="420" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" value="cachedRules.set(immutableRules)&#xa;AtomicReference swap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="200" y="500" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" value="CelRuleEngine&#xa;.compileAndCacheRules(rules)&#xa;&#xa;For each rule:&#xa;  1. compiler.compile(expression)&#xa;  2. runtime.createProgram(ast)&#xa;  3. newPrograms.put(id, program)&#xa;&#xa;Atomic volatile swap:&#xa;  compiledPrograms = newPrograms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="500" y="290" width="250" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="r6" value="Update metadata:&#xa;lastRefreshTime = Instant.now()&#xa;lastRefreshSucceeded = true" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="200" y="580" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Error path -->
+        <mxCell id="r-err" value="On Error:&#xa;lastRefreshSucceeded = false&#xa;Log error&#xa;Stale rules remain in cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="500" y="500" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Compile error note -->
+        <mxCell id="r-comp-err" value="Compile failures:&#xa;- Rule skipped&#xa;- Error logged&#xa;- Other rules still cached&#xa;- Returns compiled count" style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffcc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;size=14;" vertex="1" parent="1">
+          <mxGeometry x="800" y="290" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="ra0a" style="rounded=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="t1" target="r1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra0b" style="rounded=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" source="t2" target="r1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra0c" style="rounded=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" source="t3" target="r1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra1" style="rounded=1;strokeWidth=2;strokeColor=#333;" edge="1" source="r1" target="r2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra2" style="rounded=1;strokeWidth=2;strokeColor=#333;" edge="1" source="r2" target="r3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra3" style="rounded=1;strokeWidth=2;strokeColor=#333;" edge="1" source="r3" target="r4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra4" style="rounded=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" source="r3" target="r5" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra5" style="rounded=1;strokeWidth=2;strokeColor=#333;" edge="1" source="r4" target="r6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra6" style="rounded=1;strokeWidth=1;strokeColor=#b85450;dashed=1;" edge="1" source="r2" target="r-err" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="340" />
+              <mxPoint x="460" y="535" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ra6-label" value="error" style="edgeLabel;html=1;fontSize=9;fontColor=#b85450;fontStyle=2;" vertex="1" connectable="0" parent="ra6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ra7" style="rounded=1;strokeWidth=1;strokeColor=#d6b656;dashed=1;" edge="1" source="r5" target="r-comp-err" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- Page 5: Sequence Diagram - Event Processing -->
+  <diagram id="seq-event" name="5. Sequence: Event Processing">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title5" value="EDIOS - Sequence Diagram: Event Ingestion &amp; Processing" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="200" y="15" width="1000" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle5" value="Author: Girish Dutt" style="text;html=1;fontSize=12;fontStyle=2;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="200" y="45" width="1000" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Participants -->
+        <mxCell id="p1" value="Client" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;participant=umlActor;size=40;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="20" height="680" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" value="TransactionEvent&#xa;Resource" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="230" y="80" width="120" height="680" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" value="Vert.x&#xa;EventBus" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="440" y="80" width="100" height="680" as="geometry" />
+        </mxCell>
+        <mxCell id="p4" value="RuleEvaluator&#xa;Verticle" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="640" y="80" width="100" height="680" as="geometry" />
+        </mxCell>
+        <mxCell id="p5" value="RuleCache&#xa;Service" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="840" y="80" width="100" height="680" as="geometry" />
+        </mxCell>
+        <mxCell id="p6" value="CelRule&#xa;Engine" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="80" width="100" height="680" as="geometry" />
+        </mxCell>
+
+        <!-- Messages -->
+        <mxCell id="m1" value="POST /events [TransactionEvent[]]" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#333;" edge="1" parent="1">
+          <mxGeometry x="0.02" relative="1" as="geometry">
+            <mxPoint x="90" y="170" as="sourcePoint" />
+            <mxPoint x="280" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2" value="validate(events)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="200" as="sourcePoint" />
+            <mxPoint x="295" y="230" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="330" y="200" />
+              <mxPoint x="330" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m3" value="for each event: send(&quot;transaction.process&quot;, event)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#b85450;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="295" y="260" as="sourcePoint" />
+            <mxPoint x="485" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m4" value="202 Accepted {dispatched, total}" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#82b366;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="300" as="sourcePoint" />
+            <mxPoint x="90" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Async note -->
+        <mxCell id="async-note" value="Async - client&#xa;does not wait" style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffcc;strokeColor=#d6b656;fontSize=9;size=10;" vertex="1" parent="1">
+          <mxGeometry x="110" y="310" width="90" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m5" value="@ConsumeEvent (virtual thread)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="495" y="370" as="sourcePoint" />
+            <mxPoint x="685" y="370" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m6" value="getCachedRules()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="695" y="410" as="sourcePoint" />
+            <mxPoint x="885" y="410" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m7" value="List&lt;Rule&gt;" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;strokeWidth=1;strokeColor=#82b366;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="885" y="440" as="sourcePoint" />
+            <mxPoint x="695" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m8" value="evaluateEvent(event, rules)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="695" y="480" as="sourcePoint" />
+            <mxPoint x="1085" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m9" value="buildVariables() → eval each program" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1095" y="510" as="sourcePoint" />
+            <mxPoint x="1095" y="550" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1140" y="510" />
+              <mxPoint x="1140" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m10" value="List&lt;RuleEvaluationResult&gt; (unmodifiable)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;strokeWidth=1;strokeColor=#d6b656;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1085" y="580" as="sourcePoint" />
+            <mxPoint x="695" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m11" value="count matches/errors → log ALERTS" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="695" y="620" as="sourcePoint" />
+            <mxPoint x="695" y="660" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="740" y="620" />
+              <mxPoint x="740" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- Page 6: Sequence Diagram - Rule Refresh -->
+  <diagram id="seq-refresh" name="6. Sequence: Rule Refresh">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title6" value="EDIOS - Sequence Diagram: Rule Cache Refresh" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="200" y="15" width="800" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle6" value="Author: Girish Dutt | Startup + Periodic (60s) + Manual" style="text;html=1;fontSize=12;fontStyle=2;align=center;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="200" y="45" width="800" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Participants -->
+        <mxCell id="rp1" value="Scheduler&#xa;/ Startup" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="100" y="80" width="100" height="560" as="geometry" />
+        </mxCell>
+        <mxCell id="rp2" value="RuleCache&#xa;Service" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="100" height="560" as="geometry" />
+        </mxCell>
+        <mxCell id="rp3" value="Rule&#xa;Repository" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="540" y="80" width="100" height="560" as="geometry" />
+        </mxCell>
+        <mxCell id="rp4" value="CelRule&#xa;Engine" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;size=40;" vertex="1" parent="1">
+          <mxGeometry x="760" y="80" width="100" height="560" as="geometry" />
+        </mxCell>
+
+        <!-- Messages -->
+        <mxCell id="rm1" value="refreshRules()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="155" y="170" as="sourcePoint" />
+            <mxPoint x="365" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm2" value="findAllActiveRules()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="375" y="210" as="sourcePoint" />
+            <mxPoint x="585" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm3" value="filter(active) → SAMPLE_RULES" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="595" y="240" as="sourcePoint" />
+            <mxPoint x="595" y="270" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="640" y="240" />
+              <mxPoint x="640" y="270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm4" value="Uni&lt;List&lt;Rule&gt;&gt; (8 active rules)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="585" y="300" as="sourcePoint" />
+            <mxPoint x="375" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm5" value="List.copyOf(rules)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="375" y="330" as="sourcePoint" />
+            <mxPoint x="375" y="355" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="415" y="330" />
+              <mxPoint x="415" y="355" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm6" value="cachedRules.set(immutableRules)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#82b366;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="375" y="380" as="sourcePoint" />
+            <mxPoint x="375" y="405" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="415" y="380" />
+              <mxPoint x="415" y="405" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm7" value="compileAndCacheRules(rules)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="375" y="430" as="sourcePoint" />
+            <mxPoint x="805" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm8" value="for each rule: compile → createProgram" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#666;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="815" y="460" as="sourcePoint" />
+            <mxPoint x="815" y="490" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="860" y="460" />
+              <mxPoint x="860" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm9" value="volatile swap: compiledPrograms = newPrograms" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#d6b656;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="815" y="510" as="sourcePoint" />
+            <mxPoint x="815" y="535" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="860" y="510" />
+              <mxPoint x="860" y="535" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm10" value="compiled count (int)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;strokeWidth=1;strokeColor=#d6b656;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="805" y="560" as="sourcePoint" />
+            <mxPoint x="375" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rm11" value="lastRefreshTime = now()&#xa;lastRefreshSucceeded = true" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;strokeWidth=1;strokeColor=#82b366;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="375" y="585" as="sourcePoint" />
+            <mxPoint x="375" y="620" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="415" y="585" />
+              <mxPoint x="415" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
